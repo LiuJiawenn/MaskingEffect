@@ -6,6 +6,7 @@ import cv2
 
 def neighbour_list(block=9):
     # 返回邻域像素与中心像素的相对位置
+    # 返回的是圆形扩张的稀疏的邻域像素
     if block % 2 == 0:
         print("block size should be single!")
         return
@@ -76,7 +77,7 @@ if __name__ == '__main__':
         count+=1
 
         Y = gray[x:x+block,y:y+block].reshape(-1, 1)
-        X = neighborhood_pixels[x:x+block,y:y+block].reshape(-1,block*block).reshape(-1, neighborhood_pixels.shape[2])
+        X = neighborhood_pixels[x:x+block,y:y+block].reshape(-1, neighborhood_pixels.shape[2])
 
         S = bolck_masking(X, Y)
         masks.append(S)
