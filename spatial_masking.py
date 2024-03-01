@@ -41,8 +41,8 @@ def blockindex(r, c, block):
     res = []
     for i in range(0, r, block):
         for j in range(0, c, block):
-            if i + block <= r and j + block <= c:
-                res.append([i, j])
+            # if i + block <= r and j + block <= c:
+            res.append([i, j])
     return res
 
 
@@ -59,12 +59,11 @@ def get_neighborhood(image, neighbour_offsets):
 
     return neighborhood
 
-if __name__ == '__main__':
-    start_time = time.time()
-    block = 9
+
+def spatial_masking_effect(gray, block=9):
+    #  img 输入为帧矩阵，例如1080×1920的ndarray
+    # start_time = time.time()
     neighbourList = neighbour_list(block)
-    img = cv2.imread('C:/Users/Jiawen/Desktop/aa/frames/31.png')
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     neighborhood_pixels = get_neighborhood(gray, neighbourList)
 
     r = gray.shape[0]
@@ -93,12 +92,15 @@ if __name__ == '__main__':
 
     # 将所有行垂直堆叠起来形成最终的图像
     final_image = np.vstack(rows)
-    end_time = time.time()
-    print(f"运行时间：{end_time - start_time}秒")
+    # end_time = time.time()
+    # print(f"计算一帧空间掩蔽响应运行时间：{end_time - start_time}秒")
+    return final_image
 
-    np.save('testData/spatialMasking9.npy', final_image)
-    plt.imshow(final_image)
-    plt.show()
+img = cv2.imread('C:/Users/seren/Desktop/aa/frames/2.png')
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+f = spatial_masking_effect(gray, block=9)
+plt.imshow(f)
+print('aa')
 
 
 

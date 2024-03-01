@@ -91,3 +91,53 @@ if __name__ == '__main__':
     np.save('testData/final_image180.npy', final_image)
     plt.imshow(final_image)
     plt.show()
+
+
+def block_masking(Y,y):
+    U, S, Vh = np.linalg.svd(Y, full_matrices=True, compute_uv=True)
+    U_n = U[:, :s_nb]
+    S_n = np.diag(S[:s_nb])
+    Vh_n = Vh[:s_nb, :]
+
+    xkl = np.dot(S_n, Vh_n)
+    xl = xkl[:, -1]
+    x_kplus1_l = xkl[:, 1:]
+    x_k_lminus1 = xkl[:, 0:-1]
+
+    al = x_kplus1_l @ np.linalg.pinv(x_k_lminus1)
+    cl = U_n
+
+    RT_l_plus_1 = np.abs(y - cl @ al @ xl)
+    RT_l_plus_1 = RT_l_plus_1.reshape(patch_H, patch_w)
+    return RT_l_plus_1
+
+
+def temporal_masking_effect(gray_video_matrics, patch_h, patch_w, patch_d):
+    frame_nb = len(gray_video_matrics)
+    # 先按照patch_d在矩阵前面补充帧
+    first_d_frames = gray_video_matrics[:, :, 0:patch_d]
+    first_d_frames = first_d_frames[:, :, -1] # 倒序
+    gray_video_matrics = first_d_framse + gray_video_matrics
+
+
+    w = len(gray_video_matrics[0])
+    h = len(gray_video_matrics[0][0])
+
+    restored_masks = np.zeros((150, 1080, 1920))
+    # 设置patch大小的窗口，按照行，列, 深度移动
+    for w_d in range(0, frame_nb):
+        for w_h in range(0, h, patch_h):
+            for w_w in range(0, w, patch_w):
+                # 窗口内整理成Y， 窗口后面的一帧整理成y
+                Y = np.array(gray_video_matrics[w_d:w_d+patch_d, w_h:w_h+patch_h, w_w:w_w+patch_w]).reshape(patch_w*patch_h,patch_d)
+                y = np.array(gray_video_matrics[w_d+patch_d, w_h:w_h+patch_h, w_w:w_w+patch_w]).reshape(patch_w*patch_h)
+                # 根据Y，y计算时间掩蔽
+                block_mask = block_masking(Y, y)
+                # 暂存掩蔽响应
+                masks[w_d, w_h:w_h+patch_h, w_w:w_w+patch_w] = block_mask
+
+    # 返回响应矩阵
+    return restored_masks
+
+
+

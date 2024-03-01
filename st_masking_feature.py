@@ -3,6 +3,8 @@
 import os
 import ffmpeg
 import cv2
+from spatial_masking import spatial_masking_effect
+
 
 def h264_to_avi(path_264, path_avi):
     # print("s_264  ", path_264)
@@ -14,13 +16,24 @@ def h264_to_avi(path_264, path_avi):
     stream = ffmpeg.output(stream, path_avi, vcodec='rawvideo')
     ffmpeg.run(stream)
 
+def extract_patches(arr, patch_shape=(180, 320, 30), extraction_step=(90, 160, 15)):
+    # input (1080,1920,3)
+    # 对应维度+1需要跳过的字节数
+    patch_strides = arr.strides
+    # 四个维度，每个维度创建一个切片
+    slices = tuple(slice(None, None, st) for st in extraction_step)
+    indexing_strides = arr[slices].strides
 
-def spatial_masking_effect(image,block):
-    pass
+    # patch_indices_shape = (10,33,60,1)
+    patch_indices_shape = ((np.array(arr.shape) - np.array(patch_shape)) //
+                           np.array(extraction_step)) + 1
 
+    shape = tuple(list(patch_indices_shape) + list(patch_shape))
+    strides = tuple(list(indexing_strides) + list(patch_strides))
 
-def temporal_masking_effect(image, patch_h, patch_w, patch_d):
-    pass
+    patches = as_strided(arr, shape=shape, strides=strides)
+    patches = patches.reshape((-1, patch_shape[0]* patch_shape[1]))
+    return patches
 
 
 # path
@@ -46,8 +59,8 @@ for video in video_list:
     cap = cv2.VideoCapture(s_avi)
     ret, frame = cap.read()
     while ret:
-        frames.append(frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frames.append(gray)
         spatial_masking_frames.append(spatial_masking_effect(gray, block))
     cap.release()
 
@@ -55,8 +68,18 @@ for video in video_list:
     temporal_masking_frames = temporal_masking_effect(frames,patch_h, patch_w, patch_d)
 
     # step 4: 将时空特征响应矩阵分成180*320*30的,每个patch计算均值，形成11×11×9 的一维特征向量
+    s_patches = extract_patches(np.array(spatial_masking_frames))
+    t_patches = extract_patches(np.array(temporal_masking_frames))
+
+    s_feature = np.mean(np.array(s_patches), axis=(1, 2, 3)) # 11×11×9
+    t_feature = np.mean(np.array(t_patches), axis=(1, 2, 3))
 
     # step 5：保存向量
+    feature_path = feature_dir+ video+'/'+video+'.npy'
+    # if os.path.exist:
+    # mkdir('')
+    # 跑一个存一个，这样如果中间断了，之前跑过的视频还能留着
+    np.save(feature_path, [s_feature, t_feature])
 
 
 
